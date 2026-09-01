@@ -30,6 +30,7 @@ export default function Quiz({
   const [leaderboard, setLeaderboard] = useState<GameResult[]>([])
   const [error, setError] = useState('')
   const pollRef = useRef<NodeJS.Timeout>()
+  const hasShownChoicesRef = useRef(false)
   const participantsRef = useRef(participants)
   const hasEndedRef = useRef(false)
 
@@ -70,11 +71,13 @@ export default function Quiz({
   useEffect(() => {
     setIsAnswerRevealed(false)
     setHasShownChoices(false)
+    hasShownChoicesRef.current = false
     setAnswers([])
     hasEndedRef.current = false
 
     const timer = setTimeout(() => {
       setHasShownChoices(true)
+      hasShownChoicesRef.current = true
     }, TIME_TIL_CHOICE_REVEAL)
 
     const fetchAnswers = async () => {
@@ -86,9 +89,11 @@ export default function Quiz({
         const data = await res.json()
         setAnswers(data)
 
-        // End early once every participant has submitted an answer, but never
-        // end early while the participant list is still empty/loading.
+        // End early once every participant has submitted an answer, BUT ONLY
+        // after choices have actually been revealed to the players.
         if (
+          hasShownChoicesRef.current &&
+          !hasEndedRef.current &&
           participantsRef.current.length > 0 &&
           data.length >= participantsRef.current.length
         ) {
@@ -122,7 +127,7 @@ export default function Quiz({
       clearTimeout(timer)
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [question.id])
+  }, [question.id, gameId])
 
   const getNextQuestionData = async () => {
     if (questionCount == question.order + 1) {
@@ -185,6 +190,7 @@ export default function Quiz({
               {/* Timer */}
               <div className="flex flex-col items-center">
                 <CountdownCircleTimer
+                  key={`host-question-timer-${question.id}`}
                   onComplete={onTimeUp}
                   isPlaying
                   duration={QUESTION_ANSWER_TIME / 1000}

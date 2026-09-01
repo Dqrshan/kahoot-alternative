@@ -66,6 +66,7 @@ export default function Home({
       )}
       {currentScreen === AdminScreens.quiz && quizSet?.questions[currentQuestionSequence] && (
         <Quiz
+          key={quizSet.questions[currentQuestionSequence].id}
           question={quizSet.questions[currentQuestionSequence]}
           questionCount={quizSet.questions.length}
           gameId={gameId}

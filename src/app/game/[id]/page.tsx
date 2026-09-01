@@ -110,6 +110,7 @@ export default function Home({
       )}
       {currentScreen === Screens.quiz && questions && participant && (
         <Quiz
+          key={questions[currentQuestionSequence]?.id || currentQuestionSequence}
           question={questions[currentQuestionSequence]}
           questionCount={questions.length}
           participantId={participant.id}
