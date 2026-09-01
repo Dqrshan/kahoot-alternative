@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAdminFromCookie } from '@/lib/auth'
 
 export async function GET(
   _request: Request,
@@ -59,3 +60,45 @@ export async function POST(
 
   return NextResponse.json(participant, { status: 201 })
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await getAdminFromCookie()
+  if (!admin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id: gameId } = await params
+  const { participantId } = await request.json()
+
+  if (!participantId) {
+    return NextResponse.json(
+      { error: 'Participant ID is required' },
+      { status: 400 }
+    )
+  }
+
+  const game = await db.game.findUnique({
+    where: { id: gameId },
+  })
+
+  if (!game) {
+    return NextResponse.json({ error: 'Game not found' }, { status: 404 })
+  }
+
+  if (game.hostId !== admin.adminId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  await db.participant.deleteMany({
+    where: {
+      id: participantId,
+      gameId: gameId,
+    },
+  })
+
+  return NextResponse.json({ success: true, message: 'Player kicked' })
+}
+

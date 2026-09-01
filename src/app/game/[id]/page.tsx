@@ -77,16 +77,31 @@ export default function Home({
   useEffect(() => {
     getGame()
 
-    pollRef.current = setInterval(() => {
+    pollRef.current = setInterval(async () => {
       if (stateRef.current) {
         getGame()
+        if (participantId) {
+          try {
+            const res = await fetch(`/api/games/${gameId}/participants`)
+            if (res.ok) {
+              const participants: Participant[] = await res.json()
+              const stillExists = participants.some(({ id }) => id === participantId)
+              if (!stillExists) {
+                setParticipant(null)
+                router.replace(`/game/join?kicked=true`)
+              }
+            }
+          } catch {
+            // ignore network glitch
+          }
+        }
       }
     }, 1500)
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [gameId])
+  }, [gameId, participantId, router])
 
   return (
     <main className="bg-paper-cream min-h-screen text-charcoal font-body">

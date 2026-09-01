@@ -3,20 +3,24 @@
 import { Participant } from '@/types/types'
 import { useQRCode } from 'next-qrcode'
 import { useEffect, useState } from 'react'
-import { getAvatarFromName, AvatarIcon } from '@/lib/avatar'
+import { AvatarIcon } from '@/lib/avatar'
 
 export default function Lobby({
   participants,
   gameId,
   roomCode,
+  onKick,
 }: {
   participants: Participant[]
   gameId: string
   roomCode: string
+  onKick?: (participantId: string) => void
 }) {
   const { Canvas } = useQRCode()
   const [baseUrl, setBaseUrl] = useState('')
   const [error, setError] = useState('')
+  const [kickingId, setKickingId] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setBaseUrl(window.location.origin)
@@ -40,11 +44,45 @@ export default function Lobby({
     }
   }
 
+  const handleKickParticipant = async (participantId: string, nickname: string) => {
+    setKickingId(participantId)
+    try {
+      const res = await fetch(`/api/games/${gameId}/participants`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || 'Failed to kick player')
+        setTimeout(() => setError(''), 4000)
+      } else {
+        if (onKick) {
+          onKick(participantId)
+        }
+        setToastMessage(`Removed ${nickname}`)
+        setTimeout(() => setToastMessage(null), 3000)
+      }
+    } catch {
+      setError('Network error kicking player')
+      setTimeout(() => setError(''), 4000)
+    } finally {
+      setKickingId(null)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-cork-texture text-charcoal relative overflow-hidden flex flex-col justify-between p-4 md:p-8">
       {error && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-paper-red text-white px-6 py-3 rounded-card shadow-pin font-semibold text-sm animate-slide-up">
           {error}
+        </div>
+      )}
+
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-charcoal text-white px-6 py-3 rounded-card shadow-pin font-semibold text-sm animate-slide-up">
+          {toastMessage}
         </div>
       )}
 
@@ -98,18 +136,36 @@ export default function Lobby({
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[420px] overflow-y-auto pr-2">
                 {participants.map((participant, i) => (
-                    <div
-                      key={participant.id}
-                      className="flex items-center gap-3 p-3 rounded-card bg-paper-white border border-cork-200 shadow-card hover:shadow-card-hover transition-shadow animate-slide-up"
-                      style={{ animationDelay: `${i * 30}ms` }}
-                    >
+                  <div
+                    key={participant.id}
+                    className="group relative flex items-center justify-between p-3 rounded-card bg-paper-white border border-cork-200 shadow-card hover:shadow-card-hover transition-all animate-slide-up"
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
                       <AvatarIcon name={participant.nickname} size={40} />
-                      <span className="font-body font-semibold text-sm truncate text-charcoal">
+                      <span className="font-body font-semibold text-sm truncate text-charcoal" title={participant.nickname}>
                         {participant.nickname}
                       </span>
                     </div>
-                  )
-                )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleKickParticipant(participant.id, participant.nickname)}
+                      disabled={kickingId === participant.id}
+                      title={`Kick ${participant.nickname}`}
+                      aria-label={`Kick ${participant.nickname}`}
+                      className="opacity-80 md:opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded-card hover:bg-paper-red/10 text-pencil hover:text-paper-red focus:outline-none focus:ring-2 focus:ring-paper-red/40 cursor-pointer"
+                    >
+                      {kickingId === participant.id ? (
+                        <span className="w-4 h-4 block border-2 border-paper-red/30 border-t-paper-red rounded-full animate-spin" />
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -148,3 +204,4 @@ export default function Lobby({
     </div>
   )
 }
+

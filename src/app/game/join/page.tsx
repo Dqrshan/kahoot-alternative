@@ -78,6 +78,8 @@ function JoinForm() {
     }
   }
 
+  const wasKicked = searchParams.get('kicked') === 'true'
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-paper-cream">
       <div className="w-full max-w-md relative z-10">
@@ -93,6 +95,12 @@ function JoinForm() {
 
         {/* Card — pinned */}
         <div className="card-pinned pin p-8">
+          {wasKicked && (
+            <div className="mb-6 p-3 rounded-card bg-paper-red/10 border border-paper-red/30 text-paper-red text-center text-sm font-semibold animate-slide-up">
+              You were removed from the room by the host.
+            </div>
+          )}
+
           {step === 'code' && (
             <>
               <p className="text-pencil text-sm text-center mb-6">

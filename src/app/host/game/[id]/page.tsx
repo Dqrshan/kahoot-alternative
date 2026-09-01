@@ -59,6 +59,9 @@ export default function Home({
           participants={participants}
           gameId={gameId}
           roomCode={game?.roomCode ?? ''}
+          onKick={(participantId) => {
+            setParticipants((prev) => prev.filter((p) => p.id !== participantId))
+          }}
         />
       )}
       {currentScreen === AdminScreens.quiz && quizSet?.questions[currentQuestionSequence] && (
